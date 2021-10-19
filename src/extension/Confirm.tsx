@@ -35,9 +35,10 @@ const Component = ({ requestType, details, ...props }: Props) => {
   const { user, pagination, onFinish } = props
   const { name } = user
   const { id, origin, gasPrices, ...rest } = details
-  const { waitForConfirmation, ...txOptionsData } = rest
+  const { waitForConfirmation, bytes, ...txOptionsData } = rest
   const txOptions = parseCreateTxOptions(txOptionsData)
-  const { msgs, memo } = txOptions
+  const msgs = txOptions?.msgs
+  const memo = txOptions?.memo
 
   /* chain */
   const { chainID, lcd: URL, name: network } = useCurrentChain()
@@ -58,28 +59,46 @@ const Component = ({ requestType, details, ...props }: Props) => {
       if (user.ledger) {
         // ledger
         const key = new LedgerKey(await ledger.getPubKey())
-        const stdSignMsg = await lcd.wallet(key).createTx(txOptions)
-        const stdSignature = await key.createSignature(stdSignMsg)
 
-        result = {
-          recid: 0,
-          signature: stdSignature.signature,
-          public_key: stdSignature.pub_key,
-          stdSignMsgData: stdSignMsg.toData(),
+        if (txOptions) {
+          const stdSignMsg = await lcd.wallet(key).createTx(txOptions)
+          const stdSignature = await key.createSignature(stdSignMsg)
+
+          result = {
+            recid: 0,
+            signature: stdSignature.signature,
+            public_key: stdSignature.pub_key,
+            stdSignMsgData: stdSignMsg.toData(),
+          }
         }
       } else {
         const { privateKey } = getStoredWallet(name!, password)
         const key = new RawKey(Buffer.from(privateKey, 'hex'))
-        const stdSignMsg = await lcd.wallet(key).createTx(txOptions)
-        const { signature, recid } = key.ecdsaSign(
-          Buffer.from(stdSignMsg.toJSON())
-        )
 
-        result = {
-          recid,
-          signature: Buffer.from(signature).toString('base64'),
-          public_key: key.publicKey?.toString('base64'),
-          stdSignMsgData: stdSignMsg.toData(),
+        if (txOptions) {
+          const stdSignMsg = await lcd.wallet(key).createTx(txOptions)
+          const { signature, recid } = key.ecdsaSign(
+            Buffer.from(stdSignMsg.toJSON())
+          )
+
+          result = {
+            recid,
+            signature: Buffer.from(signature).toString('base64'),
+            public_key: key.publicKey?.toString('base64'),
+            stdSignMsgData: stdSignMsg.toData(),
+          }
+        } else if (bytes) {
+          const { signature, recid } = await key.ecdsaSign(
+            Buffer.from(bytes, 'base64')
+          )
+
+          if (!signature) throw new Error('signature is undefined')
+
+          result = {
+            recid,
+            signature: Buffer.from(signature).toString('base64'),
+            public_key: key.publicKey?.toString('base64'),
+          }
         }
       }
 
@@ -103,6 +122,8 @@ const Component = ({ requestType, details, ...props }: Props) => {
 
   /* post tx */
   const postTx = async () => {
+    if (!txOptions) return
+
     setSubmitting(true)
 
     try {
@@ -258,18 +279,20 @@ const Component = ({ requestType, details, ...props }: Props) => {
     Dictionary<Dictionary<{ url: string; types: string[] }>>
   >('/msgs/MsgGrantAuthorization.json')
 
-  const isDangerousTx = msgs.some((msg) => {
-    const { value } = msg.toData()
-    const MsgGrantAuthorization = data?.[network]
+  const isDangerousTx = !msgs
+    ? false
+    : msgs.some((msg) => {
+        const { value } = msg.toData()
+        const MsgGrantAuthorization = data?.[network]
 
-    if (MsgGrantAuthorization && 'authorization' in value) {
-      const { grantee, authorization } = value
-      const info = MsgGrantAuthorization[grantee]
-      return !(info && info.types.includes((authorization as any).type))
-    }
+        if (MsgGrantAuthorization && 'authorization' in value) {
+          const { grantee, authorization } = value
+          const info = MsgGrantAuthorization[grantee]
+          return !(info && info.types.includes((authorization as any).type))
+        }
 
-    return msg.toData().type === 'msgauth/MsgGrantAuthorization'
-  })
+        return msg.toData().type === 'msgauth/MsgGrantAuthorization'
+      })
 
   const disabled = (!user.ledger && !password) || isDangerousTx
 
@@ -334,10 +357,15 @@ const Component = ({ requestType, details, ...props }: Props) => {
       </dl>
 
       <section>
-        {msgs.map((msg) => {
+        {msgs?.map((msg, index) => {
           const isDanger = !(isOriginTerra || getIsMsgExecuteContract(msg))
           return (
-            <Message msg={msg} danger={isDanger} parseTxText={parseTxText} />
+            <Message
+              msg={msg}
+              danger={isDanger}
+              parseTxText={parseTxText}
+              key={index}
+            />
           )
         })}
       </section>
@@ -387,11 +415,17 @@ const usePage = (total: number) => {
 }
 
 /* helpers */
-const parseCreateTxOptions = (params: TxOptionsData): CreateTxOptions => {
-  const { msgs, fee } = params
-  return {
-    ...params,
-    msgs: msgs.map((msg) => Msg.fromData(JSON.parse(msg))),
-    fee: fee ? StdFee.fromData(JSON.parse(fee)) : undefined,
+const parseCreateTxOptions = (
+  params: TxOptionsData
+): CreateTxOptions | undefined => {
+  try {
+    const { msgs, fee } = params
+    return {
+      ...params,
+      msgs: msgs.map((msg) => Msg.fromData(JSON.parse(msg))),
+      fee: fee ? StdFee.fromData(JSON.parse(fee)) : undefined,
+    }
+  } catch {
+    return
   }
 }
