@@ -11,6 +11,7 @@ export const Languages: Record<LangKey, { name: string }> = {
   fr: { name: 'French' },
   ru: { name: 'Русский' },
   pl: { name: 'Polish' },
+  jp: { name: 'Japanese' },
 }
 
 export const languageList = Object.keys(Languages) as LangKey[]

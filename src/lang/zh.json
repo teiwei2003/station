@@ -470,7 +470,7 @@
       "Luna swap spread": "Luna兑换价差",
       "min.": "最小 ",
       "tobin tax": "托宾税(tobin tax)",
-      "except for {{unit}} set at {{rate}}": "除了{{unit}}的情况",
+      "except for {{unit}} set at {{rate}}": "除了{{unit}}的情况、{{rate}}設定",
 
       "Swap": "兑换",
       "Swapping...": "兑换中...",

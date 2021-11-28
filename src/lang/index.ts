@@ -7,6 +7,7 @@ import zh from '../lang/zh.json'
 import fr from '../lang/fr.json'
 import ru from '../lang/ru.json'
 import pl from '../lang/pl.json'
+import jp from '../lang/jp.json'
 
 i18n
   .use(LanguageDetector)
@@ -19,6 +20,7 @@ i18n
       fr: { translation: fr },
       ru: { translation: ru },
       pl: { translation: pl },
+      jp: { translation: jp },
     },
     lng: 'en',
     keySeparator: ':',
