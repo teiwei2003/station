@@ -1,7 +1,7 @@
 import { TFunction, useTranslation } from 'react-i18next'
 import BigNumber from 'bignumber.js'
 import numeral from 'numeral'
-import { div, format, gt, lt, percent, sum, times, VoteOption } from '../../lib'
+import { format, gt, lt, percent, sum, times, VoteOption } from '../../lib'
 import { useProposal, useProposalId } from '../../data/lcd/gov'
 import { useVotesContents, useTallyParams } from '../../data/lcd/gov'
 import { useStakingPool } from '../../data/lcd/staking'
