@@ -13,11 +13,11 @@ const Rewards = ({ headings, contents }: RewardsTable) => {
       </thead>
 
       <tbody>
-        {contents.map((content, index) => (
+        {contents.map((display, index) => (
           <tr key={index}>
-            <td>{content['unit']}</td>
+            <td>{display.unit}</td>
             <td className="text-right">
-              <Number>{content['value']}</Number>
+              <Number>{display.value}</Number>
             </td>
           </tr>
         ))}

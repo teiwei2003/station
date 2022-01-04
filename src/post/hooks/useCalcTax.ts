@@ -21,8 +21,12 @@ const useCalcTax = (denom: string, t: TFunction) => {
   const { data: cap = '0', isLoading: loadingCap } = useQuery(
     ['taxCap', denom],
     async () => {
-      const data = await lcd.treasury.taxCap(denom)
-      return data.amount.toString()
+      try {
+        const data = await lcd.treasury.taxCap(denom)
+        return data.amount.toString()
+      } catch {
+        return '1000000'
+      }
     },
     { enabled: denom !== '' && denom !== 'uluna' && !is.address(denom) }
   )
@@ -50,7 +54,7 @@ const useCalcTax = (denom: string, t: TFunction) => {
       const tax = new BigNumber(amount).times(rate)
 
       return BigNumber.min(tax, new BigNumber(cap))
-        .integerValue(BigNumber.ROUND_CEIL)
+        .integerValue(BigNumber.ROUND_FLOOR)
         .toString()
     },
     [cap, rate]

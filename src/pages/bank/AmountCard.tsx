@@ -1,6 +1,6 @@
 import { FC, ReactNode, useState } from 'react'
 import classNames from 'classnames/bind'
-import { BuyUST } from '@terra-money/react-widget'
+import { Buy } from '@terra-money/react-widget'
 import { AvailableItem } from '../../lib'
 import { TERRA_ASSETS, TRANSAK_API_KEY } from '../../constants'
 import { is } from '../../utils'
@@ -35,10 +35,10 @@ const AmountCard: FC<Props> = ({ display, button, children, ...props }) => {
 
   const icon = props.icon ? (
     <img src={props.icon} className={s.icon} alt="" {...size} />
-  ) : isIBC ? (
-    <IBC {...size} />
   ) : !iconError ? (
     <img src={src} onError={() => setIconError(true)} alt="" {...size} />
+  ) : isIBC ? (
+    <IBC {...size} />
   ) : (
     <Terra {...size} />
   )
@@ -50,9 +50,9 @@ const AmountCard: FC<Props> = ({ display, button, children, ...props }) => {
           {icon}
           {isIBC ? <IBCUnit>{unit}</IBCUnit> : unit}
 
-          {!isExtension && extended && (
-            <div className={s.buyust}>
-              <BuyUST transakApiKey={TRANSAK_API_KEY} />
+          {!isExtension && (unit === 'Luna' || unit === 'UST') && (
+            <div className={s.buy}>
+              <Buy transakApiKey={TRANSAK_API_KEY} currency={unit} />
             </div>
           )}
         </h1>

@@ -9,7 +9,7 @@ import { ConfirmContent, ConfirmProps } from '../../../types'
 import { is, format, find } from '../../../utils'
 import { gt, max, minus } from '../../../utils/math'
 import { toAmount, toInput } from '../../../utils/format'
-import { useAddress } from '../../../data/auth'
+import { useAddress } from '../../../auth/auth'
 import { useDenomTrace } from '../../../data/lcd/ibc'
 import { TokenBalanceQuery } from '../../../cw20/useTokenBalance'
 import useBank from '../../../api/useBank'
@@ -176,7 +176,7 @@ export default (denom: string, tokenBalance: TokenBalanceQuery): PostPage => {
               transfer: { recipient: to, amount },
             }),
           ],
-    tax: shouldTax ? new Coin(denom, taxAmount) : undefined,
+    tax: shouldTax && gt(taxAmount, 0) ? new Coin(denom, taxAmount) : undefined,
     memo,
     contents,
     feeDenom: { list: getFeeDenomList(bank.balance) },
