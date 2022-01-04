@@ -1,0 +1,37 @@
+@import '../../styles/mixins';
+@import '../../styles/variables';
+
+.wrapper {
+  flex: 1;
+  @media (max-width: $breakpoint-large) {
+    width: 100%;
+    border-radius: 0;
+  }
+}
+
+.header {
+  @include flex(flex-start);
+  margin-bottom: 10px;
+}
+
+.title {
+  display: inline-block;
+  font-weight: 500;
+  margin-left: 5px;
+}
+
+.address {
+  @include flex(space-between);
+  font-size: 14px;
+
+  border-bottom: 1px solid $line;
+  padding: 16px 0;
+
+  &:hover {
+    text-decoration: none;
+  }
+
+  &:last-child {
+    border: 0;
+  }
+}

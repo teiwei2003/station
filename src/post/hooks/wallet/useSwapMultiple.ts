@@ -5,9 +5,9 @@ import { Coin, Coins } from '@terra-money/terra.js'
 import { Msg, MsgExecuteContract, MsgSwap } from '@terra-money/terra.js'
 import { PostPage, CoinItem, Field } from '../../../types'
 import { BankData, Pairs, ConfirmProps } from '../../../types'
-import { format, gt, is, minus, sum } from '../../../utils'
+import { format, gt, gte, is, minus, sum } from '../../../utils'
 import { toInput } from '../../../utils/format'
-import { useAddress } from '../../../data/auth'
+import { useAddress } from '../../../auth/auth'
 import { useCurrentChain, useCurrentChainName } from '../../../data/chain'
 import { getFeeDenomList, isFeeAvailable } from '../validateConfirm'
 import { useActiveDenoms, useForm } from '../../../lib'
@@ -239,11 +239,9 @@ export default ({ bank, pairs }: Params): PostPage => {
           element: 'select',
           attrs: getDefaultAttrs('to'),
           setValue: (value: string) => setValue('to', value),
-          options: ['uluna', ...(activeDenoms.data?.result ?? [])].map(
-            (denom) => {
-              return { value: denom, children: format.denom(denom) }
-            }
-          ),
+          options: ['uluna', ...(activeDenoms.data ?? [])].map((denom) => {
+            return { value: denom, children: format.denom(denom) }
+          }),
         },
         input: {
           label: '',
@@ -284,9 +282,11 @@ export default ({ bank, pairs }: Params): PostPage => {
     tax:
       to === 'uluna'
         ? new Coins(
-            checked.map(
-              (denom) => new Coin(denom, getTax(availableList[denom], denom))
-            )
+            checked
+              .filter((denom) => gte(getTax(availableList[denom], denom), 0))
+              .map(
+                (denom) => new Coin(denom, getTax(availableList[denom], denom))
+              )
           )
         : undefined,
     contents: [

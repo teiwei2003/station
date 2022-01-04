@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TFunction } from 'i18next'
+import { flatten, uniq } from 'ramda'
 import { MsgExecuteContract, MsgSwap } from '@terra-money/terra.js'
 import { Coin } from '@terra-money/terra.js'
 import { PostPage, SwapUI, ConfirmProps } from '../../../types'
@@ -26,6 +27,7 @@ import { getTerraswapURL, simulateTerraswap } from './terraswap'
 import * as routeswap from './routeswap'
 import useCalcTax from '../useCalcTax'
 import { useCalcFee } from '../txHelpers'
+import { useDenomTraceList } from '../../../data/lcd/ibc'
 
 const { findPair, getRouteMessage } = routeswap
 const { isRouteAvailable, isMarketAvailable, simulateRoute } = routeswap
@@ -70,12 +72,31 @@ export default (user: User, actives: string[]): PostPage<SwapUI> => {
   const loadingUI =
     bank.loading || loadingWhitelist || cw20TokenBalance.loading || loadingPairs
 
+  const terraswapAvailableList = uniq(flatten(Object.values(pairs ?? {})))
+  const terraswapAvailableIBCDenoms = terraswapAvailableList.filter(is.ibcDenom)
+  const denomTraceList = useDenomTraceList(terraswapAvailableIBCDenoms)
+
+  const formatDenom = (denom: string) => {
+    if (is.ibcDenom(denom)) {
+      const base_denom =
+        denomTraceList[terraswapAvailableIBCDenoms.indexOf(denom)].data
+          ?.base_denom
+      return format.denom(base_denom) ?? format.truncate(denom)
+    } else {
+      return format.denom(denom, whitelist)
+    }
+  }
+
   // tokens
-  const nativeTokensOptions = ['uluna', ...actives].map((denom) => ({
+  const nativeTokensOptions = [
+    'uluna',
+    ...actives,
+    ...terraswapAvailableIBCDenoms,
+  ].map((denom) => ({
     value: denom,
-    children: format.denom(denom),
+    children: formatDenom(denom),
     balance: find(`${denom}:available`, bank.data?.balance) ?? '0',
-    icon: `${TERRA_ASSETS}/icon/60/${format.denom(denom)}.png`,
+    icon: `${TERRA_ASSETS}/icon/60/${formatDenom(denom)}.png`,
   }))
 
   const cw20TokensList = whitelist
@@ -226,7 +247,8 @@ export default (user: User, actives: string[]): PostPage<SwapUI> => {
   const formattedExpectedPrice = times(expectedPrice, Math.pow(10, decimals))
 
   // simulate: Max & Tax
-  const shouldTax = is.nativeTerra(from) && mode !== 'Market'
+  const shouldTax =
+    (is.nativeTerra(from) || is.ibcDenom(from)) && mode !== 'Market'
   const calcTax = useCalcTax(from, t)
   const calcFee = useCalcFee()
   const { getMax, getTax, label: taxLabel, loading: loadingTax } = calcTax
@@ -373,7 +395,7 @@ export default (user: User, actives: string[]): PostPage<SwapUI> => {
         type: 'number',
         placeholder: '0',
       },
-      unit: format.denom(from),
+      unit: formatDenom(from),
     },
     {
       label: '',
@@ -463,12 +485,12 @@ export default (user: User, actives: string[]): PostPage<SwapUI> => {
           )
             ? 'Simulating...'
             : gt(formattedExpectedPrice, 1)
-            ? `1 ${format.denom(to, whitelist)} = ${format.decimal(
+            ? `1 ${formatDenom(to)} = ${format.decimal(
                 formattedExpectedPrice
-              )} ${format.denom(from, whitelist)}`
-            : `1 ${format.denom(from, whitelist)} = ${format.decimal(
+              )} ${formatDenom(from)}`
+            : `1 ${formatDenom(from)} = ${format.decimal(
                 div(1, formattedExpectedPrice)
-              )} ${format.denom(to, whitelist)}`,
+              )} ${formatDenom(to)}`,
         },
     spread:
       !gt(simulated, 0) || !mode
@@ -488,7 +510,7 @@ export default (user: User, actives: string[]): PostPage<SwapUI> => {
                   t
                 ),
               value: format.amount(minus(principal, simulated)),
-              unit: format.denom(to),
+              unit: formatDenom(to),
             },
             Terraswap: {
               title: 'Trading Fee',
@@ -496,15 +518,11 @@ export default (user: User, actives: string[]): PostPage<SwapUI> => {
                 tradingFeeTerraswap,
                 whitelist?.[to]?.decimals
               ),
-              unit: format.denom(to),
+              unit: formatDenom(to),
             },
             Route: {
               title: 'Route',
-              text: [
-                format.denom(from, whitelist),
-                'UST',
-                format.denom(to, whitelist),
-              ].join(' > '),
+              text: [formatDenom(from), 'UST', formatDenom(to)].join(' > '),
             },
           }[mode],
     label: { multipleSwap: t('Post:Swap:Swap multiple coins') },
@@ -555,7 +573,7 @@ export default (user: User, actives: string[]): PostPage<SwapUI> => {
               ),
             ],
           }[mode]) ?? [],
-    tax: shouldTax ? new Coin(from, tax) : undefined,
+    tax: shouldTax && gt(tax, 0) ? new Coin(from, tax) : undefined,
     contents: [
       {
         name: 'Mode',
@@ -630,7 +648,7 @@ export default (user: User, actives: string[]): PostPage<SwapUI> => {
           undefined,
           whitelist
         ),
-        unit: format.denom(to, whitelist),
+        unit: formatDenom(to),
       })
 
       const executed_price = div(received, paid)
@@ -643,7 +661,7 @@ export default (user: User, actives: string[]): PostPage<SwapUI> => {
     },
     warning: t(
       'Post:Swap:Final amount you receive in {{unit}} may vary due to the swap rate changes',
-      { unit: format.denom(to, whitelist) }
+      { unit: formatDenom(to) }
     ),
   })
 

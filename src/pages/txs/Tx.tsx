@@ -1,5 +1,5 @@
 import c from 'classnames'
-import { TxDescription } from '@terra-money/react-widget'
+import { TxDescription } from '@terra-money/react-base-components'
 import { TxUI, MessageUI, Card as CardProps } from '../../lib'
 import { format } from '../../lib'
 import Card from '../../components/Card'
@@ -7,11 +7,11 @@ import Icon from '../../components/Icon'
 import Badge from '../../components/Badge'
 import ExtLink from '../../components/ExtLink'
 import { useCurrentChainName } from '../../data/chain'
-import { useAddress } from '../../data/auth'
+import { useAddress } from '../../auth/auth'
 import useLCD from '../../api/useLCD'
 import s from './Tx.module.scss'
 
-const Tx = ({ link, hash, date, messages, details }: TxUI) => {
+const Tx = ({ link, hash, date, messages, details, collapsedLength }: TxUI) => {
   const renderTitle = () => (
     <>
       <ExtLink href={link} className={s.hash}>
@@ -44,7 +44,10 @@ const Tx = ({ link, hash, date, messages, details }: TxUI) => {
         <section className={s.text}>
           {summary.map((item, index) => (
             <p key={index}>
-              <TxDescription network={config} config={{ myWallet: address }}>
+              <TxDescription
+                network={config}
+                config={{ myWallet: address, printCoins: 2 }}
+              >
                 {item}
               </TxDescription>
             </p>
@@ -64,6 +67,9 @@ const Tx = ({ link, hash, date, messages, details }: TxUI) => {
   return (
     <Card title={renderTitle()} {...classNames} bgHeader>
       {messages.map(renderMessage)}
+      {collapsedLength ? (
+        <span className={s.collapsed}>{collapsedLength} more</span>
+      ) : null}
       <hr />
       <ul className={s.details}>{details.map(renderDetail)}</ul>
     </Card>

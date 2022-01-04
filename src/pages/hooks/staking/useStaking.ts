@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { path } from 'ramda'
-import { useAddress, useUser } from '../../../data/auth'
+import { useAddress, useUser } from '../../../auth/auth'
 import { StakingUI, StakingPersonal } from '../../../types'
 import { StakingData, StakingPage, StakingDelegation } from '../../../types'
 import { ValidatorSorter, Undelegation } from '../../../types'
 import { ValidatorListHeadings, ValidatorListHeading } from '../../../types'
-import { format } from '../../../utils'
+import { format, is } from '../../../utils'
 import { sum, plus, minus } from '../../../utils'
 import { gte, gt, isFinite, toNumber } from '../../../utils'
 import useFCD from '../../../api/useFCD'
 import useValidatorItem from './useValidatorItem'
+import { useDenomTracePair } from '../../../data/lcd/ibc'
 
 const denom = 'uluna'
 export default (initialSort?: { by: string; sort?: string }): StakingPage => {
@@ -24,6 +25,13 @@ export default (initialSort?: { by: string; sort?: string }): StakingPage => {
   const address = useAddress()
   const url = address ? `/v1/staking/${address}` : '/v1/staking'
   const response = useFCD<StakingData>({ url })
+  const denomPair = useDenomTracePair(
+    response.data?.rewards?.denoms.map(({ denom }) => denom)
+  )
+
+  const formatDenom = (denom: string) => {
+    return is.ibcDenom(denom) ? denomPair[denom] : denom
+  }
 
   /* render */
   const renderPersonal = ({
@@ -90,7 +98,10 @@ export default (initialSort?: { by: string; sort?: string }): StakingPage => {
           children: t('Page:Staking:Withdraw all rewards'),
           disabled: !(rewards && gte(rewards.total, 1)),
         },
-        amounts: rewards?.denoms.map((coin) => format.display(coin)) ?? [],
+        amounts:
+          rewards?.denoms.map((coin) => {
+            return format.display({ ...coin, denom: formatDenom(coin.denom) })
+          }) ?? [],
         validators:
           myDelegationsFiltered?.map(
             ({ validatorAddress }) => validatorAddress
@@ -132,7 +143,9 @@ export default (initialSort?: { by: string; sort?: string }): StakingPage => {
                 unit: t('Common:Coin'),
                 value: t('Common:Tx:Amount'),
               },
-              contents: rewards.denoms.map((r) => format.display(r)),
+              contents: rewards.denoms.map((coin) =>
+                format.display({ ...coin, denom: formatDenom(coin.denom) })
+              ),
             },
         desc: {
           header: t(

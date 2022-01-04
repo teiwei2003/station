@@ -1,0 +1,14 @@
+@import '../../styles/mixins';
+@import '../../styles/variables';
+
+.title {
+  font-size: 26px;
+  margin-bottom: 20px;
+}
+
+.wrapper {
+  align-items: flex-start;
+  @media (max-width: $breakpoint-large) {
+    flex-direction: column;
+  }
+}
